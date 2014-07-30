@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<img src="simple.png" />
+<img id="evolving" src="" />
+
+<script>
+  var img_num = 100
+  setInterval(function(){showNext()}, 1 / 12)
+  
+  function showNext() {
+    img_num += 100
+    if (img_num > 150000) {
+      img_num = 100
+    }
+    
+    document.getElementById("evolving").src = img_num + "_simple.svg";
+  }
+</script>
+
+</body>
+</html> 
