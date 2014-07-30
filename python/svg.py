@@ -4,6 +4,8 @@ xml_header = ("<?xml version=\"1.0\" standalone=\"no\"?>\n"
 
 svg_header = ("<svg width=\"{}px\" height=\"{}px\" version=\"1.1\" "
               "xmlns=\"http://www.w3.org/2000/svg\">\n")
+              
+svg_close = "</svg>"
 
 svg_circle = ("<circle cx=\"{}px\" cy=\"{}px\" r=\"{}px\" fill=\"#{}\" "
               "fill-opacity=\"{}\"/>\n")
@@ -22,7 +24,8 @@ def openSVG(name, width, height):
 
 
 def closeSVG(file):
-    file.write("</svg>")
+    file.write(svg_close)
+    file.close()
 
 
 def writeCircle(file, cx, cy, r, hex, opacity):
