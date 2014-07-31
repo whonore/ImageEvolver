@@ -40,7 +40,7 @@ def writeRectangle(file, x, y, width, height, hex, opacity):
     file.write(svg_rectange.format(x, y, width, height, hex, opacity))
 
 
-def rgb2Hex(r, g, b):
+def rgb2hex(r, g, b):
     """Convert an rgb value into hexadecimal."""
     hex_rgb = []
     for c in (r, g, b):
@@ -51,3 +51,12 @@ def rgb2Hex(r, g, b):
         hex_rgb.append(hex_c)
 
     return "".join(hex_rgb)
+
+
+def hex2rgb(hex_str):
+    """Convert a hex value into rgb."""
+    r = int(hex_str[0:2], 16)
+    g = int(hex_str[2:4], 16)
+    b = int(hex_str[4:6], 16)
+
+    return r, g, b
