@@ -4,7 +4,7 @@ xml_header = ("<?xml version=\"1.0\" standalone=\"no\"?>\n"
 
 svg_header = ("<svg width=\"{}px\" height=\"{}px\" version=\"1.1\" "
               "xmlns=\"http://www.w3.org/2000/svg\">\n")
-              
+
 svg_close = "</svg>"
 
 svg_circle = ("<circle cx=\"{}px\" cy=\"{}px\" r=\"{}px\" fill=\"#{}\" "
@@ -15,6 +15,7 @@ svg_rectange = ("<rect x=\"{}px\" y=\"{}px\" width=\"{}px\" height=\"{}px\" "
 
 
 def openSVG(name, width, height):
+    """Open an svg file and write the header information."""
     file = open(name + ".svg", 'w')
 
     file.write(xml_header)
@@ -24,19 +25,23 @@ def openSVG(name, width, height):
 
 
 def closeSVG(file):
+    """Close the svg tag and close the file."""
     file.write(svg_close)
     file.close()
 
 
 def writeCircle(file, cx, cy, r, hex, opacity):
+    """Write the svg circle tag."""
     file.write(svg_circle.format(cx, cy, r, hex, opacity))
 
 
 def writeRectangle(file, x, y, width, height, hex, opacity):
+    """Write the svg rect tag."""
     file.write(svg_rectange.format(x, y, width, height, hex, opacity))
 
 
 def rgb2Hex(r, g, b):
+    """Convert an rgb value into hexadecimal."""
     hex_rgb = []
     for c in (r, g, b):
         hex_c = hex(c)[2:]

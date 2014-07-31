@@ -1,12 +1,17 @@
 import sys
 import os
 import random
-import pygame
 import time
+
+import pygame
 from PIL import Image
+
 import svg
+import html
+
 
 def getOriginal(file):
+    """Create the grid of the reference image's pixel values."""
     im = Image.open(file)
 
     global orig_width, orig_height
@@ -18,7 +23,9 @@ def getOriginal(file):
 
     im.close()
 
+
 def randomize():
+    """Create a list of random circles."""
     # x, y, radius, r, g, b, a
     for i in range(num_circles):
         circles.append((random.randint(0, orig_width),
@@ -29,12 +36,15 @@ def randomize():
                         random.randint(0, 255),
                         random.random()))
 
+
 def drawGen(screen, write=False, name=None, generation=None):
+    """Draw the circles to the pygame screen. Create an svg image if
+    write == True.
+    """
     screen.fill((255, 255, 255))
     if write:
-        if not os.path.exists(name):
-            os.mkdir(name)
-        file = svg.openSVG(name + "/" + str(generation), orig_width, orig_height)
+        file = svg.openSVG(html_path + name + "/" + str(generation),
+                           orig_width, orig_height)
 
     for c in circles:
         x = c[0]
@@ -56,7 +66,10 @@ def drawGen(screen, write=False, name=None, generation=None):
         pygame.display.update()
         svg.closeSVG(file)
 
+
 def getFitness(screen):
+    """Calculate the sum of the square of the difference in color at each
+    pixel."""
     dif = 0
     for x in range(orig_width):
         for y in range(orig_height):
@@ -68,7 +81,9 @@ def getFitness(screen):
 
     return dif
 
+
 def mutate():
+    """Choose 1-4 circles and randomize one of their features."""
     num_mutations = random.randint(1, 4)
     feature = random.randint(0, 6)
 
@@ -89,33 +104,40 @@ def mutate():
         new_circle[feature] = new_feat
         circles[circle_idx] = tuple(new_circle)
 
+
+# if __name__ == " __main__":
 pygame.init()
+
+html_path = "../html/"
+img_path = "../images/"
+img, ext = sys.argv[1].split(".")
+max_gens = int(sys.argv[2])
+gen_gap = int(sys.argv[3])
+num_circles = int(sys.argv[4])
 
 orig_width = 0
 orig_height = 0
 original = []
-
-num_circles = 128
 circles = []
-generation = 1
 
-img, ext = sys.argv[1].split(".")
-max_gens = int(sys.argv[2])
-gen_gap = int(sys.argv[3])
+if not os.path.exists(html_path + img):
+    os.mkdir(html_path + img)
+movie = html.openHTML(html_path + img + "/movie", img + "." + ext)
+html.writeLoop(movie, max_gens, gen_gap)
+html.closeHTML(movie)
 
-getOriginal(img + "." + ext)
+getOriginal(img_path + img + "." + ext)
 randomize()
 screen = pygame.display.set_mode((orig_width, orig_height))
 pygame.display.set_caption("Genetic Image Evolver")
 
 drawGen(screen)
-old_fit = getFitness(screen)
-last_fit = old_fit
+last_fit = old_fit = getFitness(screen)
+
 start_time = 0
 time.clock()
 
 for gen in range(0, max_gens + 1):
-    pygame.display.set_caption("Genetic Image Evolver Generation: {}".format(gen))
     circles_old = [c for c in circles]
     mutate()
     drawGen(screen)
@@ -128,10 +150,11 @@ for gen in range(0, max_gens + 1):
 
     if gen % gen_gap == 0:
         time_passed = time.clock() - start_time
+        fit_dif = last_fit - old_fit
 
         print("Generation: {}".format(gen))
         print("Distance: {:,}".format(old_fit))
-        print("% Improvement: {:.2%}".format((last_fit - old_fit) / last_fit))
+        print("% Improvement: {:.2%}".format(fit_dif / last_fit))
         print("Time / gen: {:.2f}".format((time_passed) / gen_gap))
         print()
 

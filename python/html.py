@@ -15,12 +15,13 @@ html_script = ("<script>\n"
                "     }}\n"
                "\n"
                "     document.getElementById(\"evolving\").src = "
-               " {} + \"/\" + img_num + \".svg\";\n"
+               "img_num + \".svg\";\n"
                "   }}\n"
                "</script>\n")
 
 
 def openHTML(name, reference_img):
+    """Open an html file and write the header information."""
     file = open(name + ".html", 'w')
 
     file.write(html_header)
@@ -30,9 +31,11 @@ def openHTML(name, reference_img):
 
 
 def closeHTML(file):
+    """Close the html tags and close the file."""
     file.write(html_close)
     file.close()
 
 
-def writeLoop(file, img_name, max_gen, gen_gap, frame_rate=12):
-    file.write(html_script.format(frame_rate, gen_gap, max_gen, img_name))
+def writeLoop(file, max_gen, gen_gap, frame_rate=12):
+    """Write the script to loop through the svg images."""
+    file.write(html_script.format(frame_rate, gen_gap, max_gen))
