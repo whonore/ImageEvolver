@@ -1,44 +1,94 @@
-import sys
+import copy
 import os
 import random
+import shutil
+import sys
 import time
 
 import pygame
 from PIL import Image
 
-import svg
 import html
+import svg
 
 
-def getOriginal(file):
+class Shape():
+    def __init__(self, type, max_width, max_height):
+        self.type = type
+        
+        self.x = random.randint(0, max_width)
+        self.y = random.randint(0, max_height)
+        
+        min_dim = min(max_width, max_height)
+        self.rad = random.randint(0, min_dim // 2)
+        self.length = 2 * self.rad
+            
+        self.r = random.randint(0, 255)
+        self.g = random.randint(0, 255)
+        self.b = random.randint(0, 255)
+        self.a = random.random()
+        
+    def mutate(self, max_width, max_height):
+        feature = random.randint(0, 7)
+        #feature = random.randint(1, 7)
+            
+        if feature == 0:
+            if self.type == "circle":
+                self.type = "square"
+                self.x -= self.rad
+                self.y -= self.rad
+            else:
+                self.type = "circle"
+                self.x += self.rad
+                self.y += self.rad
+        elif feature == 1:
+            self.x = random.randint(0, max_width)
+        elif feature == 2:
+            self.y = random.randint(0, max_height)
+        elif feature == 3:
+            min_dim = min(max_width, max_height)
+            self.rad = random.randint(0, min_dim // 2)
+            self.length = 2 * self.rad
+        elif feature == 4:
+            self.r = random.randint(0, 255)
+        elif feature == 5:
+            self.g = random.randint(0, 255)
+        elif feature == 6:
+            self.b = random.randint(0, 255)      
+        else:
+            self.a = random.random()
+
+
+def getOriginal(picture):
     """Create the grid of the reference image's pixel values."""
-    im = Image.open(file)
-
-    global orig_width, orig_height
+    im = Image.open(picture)
+    original = []    
     orig_width, orig_height = im.size
+    
     for x in range(orig_width):
         original.append([])
         for y in range(orig_height):
             original[-1].append(im.getpixel((x, y)))
 
     im.close()
+    
+    return original
 
 
-def randomize():
-    """Create a list of random circles."""
-    # x, y, radius, r, g, b, a
-    for i in range(num_circles):
-        circles.append((random.randint(0, orig_width),
-                        random.randint(0, orig_height),
-                        random.randint(0, min(orig_width, orig_height) // 2),
-                        random.randint(0, 255),
-                        random.randint(0, 255),
-                        random.randint(0, 255),
-                        random.random()))
+def randomize(orig_width, orig_height):
+    """Create a list of random shapes."""
+    shapes = []
+    for i in range(num_shapes):
+        type = ("circle", "square")[random.randint(0, 1)]
+        #type = "square"
+        shapes.append(Shape(type, orig_width, orig_height))
+                        
+    return shapes
 
 
-def drawGen(screen, write=False, name=None, generation=None):
-    """Draw the circles to the pygame screen. Create an svg image if
+def drawGen(screen, orig_width, orig_height, write=False, name=None, 
+            generation=None):
+    """Draw the shapes to the pygame screen. Create an svg image if
     write == True.
     """
     screen.fill((255, 255, 255))
@@ -46,31 +96,35 @@ def drawGen(screen, write=False, name=None, generation=None):
         file = svg.openSVG(html_path + name + "/" + str(generation),
                            orig_width, orig_height)
 
-    for c in circles:
-        x = c[0]
-        y = c[1]
-        rad = c[2]
-        r = c[3]
-        g = c[4]
-        b = c[5]
-        a = c[6]
+    for s in shapes:
+        if s.type == "circle":
+            surf = pygame.Surface((2 * s.rad, 2 * s.rad), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (s.r, s.g, s.b, s.a * 255), 
+                               (s.rad, s.rad), s.rad)
+            screen.blit(surf, (s.x - s.rad, s.y - s.rad))
 
-        surf = pygame.Surface((2 * rad, 2 * rad), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (r, g, b, a * 255), (rad, rad), rad)
-        screen.blit(surf, (x - rad, y - rad))
-
-        if write:
-            svg.writeCircle(file, x, y, rad, svg.rgb2Hex(r, g, b), a)
+            if write:
+                svg.writeCircle(file, s.x, s.y, s.rad, 
+                                svg.rgb2Hex(s.r, s.g, s.b), s.a)
+        else:
+            surf = pygame.Surface((s.length, s.length), pygame.SRCALPHA)
+            surf.fill((s.r, s.g, s.b, s.a * 255))
+            screen.blit(surf, (s.x, s.y))
+            
+            if write:
+                svg.writeRectangle(file, s.x, s.y, s.length, s.length,
+                                   svg.rgb2Hex(s.r, s.g, s.b), s.a)
 
     if write:
         pygame.display.update()
         svg.closeSVG(file)
 
 
-def getFitness(screen):
+def getFitness(screen, original, orig_width, orig_height):
     """Calculate the sum of the square of the difference in color at each
     pixel."""
     dif = 0
+    
     for x in range(orig_width):
         for y in range(orig_height):
             orig_px = original[x][y]
@@ -82,85 +136,80 @@ def getFitness(screen):
     return dif
 
 
-def mutate():
-    """Choose 1-4 circles and randomize one of their features."""
+def mutate(shapes, orig_width, orig_height):
+    """Choose 1-4 shapes and randomize one of their features."""
     num_mutations = random.randint(1, 4)
-    feature = random.randint(0, 6)
 
     for i in range(num_mutations):
-        if feature == 0:
-            new_feat = random.randint(0, orig_width)
-        elif feature == 1:
-            new_feat = random.randint(0, orig_height)
-        elif feature == 2:
-            new_feat = random.randint(0, min(orig_width, orig_height) // 2)
-        elif 3 <= feature <= 5:
-            new_feat = random.randint(0, 255)
+        random.choice(shapes).mutate(orig_width, orig_height)
+
+
+if __name__ == "__main__":
+    pygame.init()
+
+    html_path = "../html/"
+    img_path = "../images/"
+    img, ext = sys.argv[1].split(".")
+    max_gens = int(sys.argv[2])
+    gen_gap = int(sys.argv[3])
+    num_shapes = int(sys.argv[4])
+
+    if not os.path.exists(html_path + img):
+        os.mkdir(html_path + img)
+        shutil.copy(img_path + img + "." + ext, html_path + img)
+    movie = html.openHTML(html_path + img + "/movie", img + "." + ext)
+    html.writeLoop(movie, max_gens, gen_gap)
+    html.closeHTML(movie)
+
+    original = getOriginal(img_path + img + "." + ext)
+    orig_width = len(original)
+    orig_height = len(original[0])
+    
+    shapes = randomize(orig_width, orig_height)
+    
+    screen = pygame.display.set_mode((orig_width, orig_height))
+    pygame.display.set_caption("Genetic Image Evolver")
+
+    drawGen(screen, orig_width, orig_height)
+    last_fit = old_fit = getFitness(screen, original, orig_width, orig_height)
+
+    start_time = 0
+    time.clock()
+    
+    #with open('data.csv', 'w') as data:
+    #    data.write("Generation,Distance,% Improvement")
+
+    for gen in range(0, max_gens + 1):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+                
+        shapes_old = copy.deepcopy(shapes)
+        mutate(shapes, orig_width, orig_height)
+        drawGen(screen, orig_width, orig_height)
+        new_fit = getFitness(screen, original, orig_width, orig_height)
+
+        if new_fit > old_fit:
+            shapes = copy.deepcopy(shapes_old)
         else:
-            new_feat = random.random()
+            old_fit = new_fit
 
-        circle_idx = random.randint(0, len(circles) - 1)
-        new_circle = list(circles[circle_idx])
-        new_circle[feature] = new_feat
-        circles[circle_idx] = tuple(new_circle)
+        if gen % gen_gap == 0:
+            time_passed = time.clock() - start_time
+            fit_dif = last_fit - old_fit
 
+            print("Generation: {}".format(gen))
+            print("Distance: {:,}".format(old_fit))
+            print("% Improvement: {:.2%}".format(fit_dif / last_fit))
+            print("Time / gen: {:.2f}".format((time_passed) / gen_gap))
+            print()
+            
+            #with open('data.csv', 'a') as data:
+            #    data.write("\n" + str(gen) + "," + str(old_fit) + "," + str(fit_dif / last_fit))
 
-# if __name__ == " __main__":
-pygame.init()
+            start_time = time.clock()
+            last_fit = old_fit
 
-html_path = "../html/"
-img_path = "../images/"
-img, ext = sys.argv[1].split(".")
-max_gens = int(sys.argv[2])
-gen_gap = int(sys.argv[3])
-num_circles = int(sys.argv[4])
-
-orig_width = 0
-orig_height = 0
-original = []
-circles = []
-
-if not os.path.exists(html_path + img):
-    os.mkdir(html_path + img)
-movie = html.openHTML(html_path + img + "/movie", img + "." + ext)
-html.writeLoop(movie, max_gens, gen_gap)
-html.closeHTML(movie)
-
-getOriginal(img_path + img + "." + ext)
-randomize()
-screen = pygame.display.set_mode((orig_width, orig_height))
-pygame.display.set_caption("Genetic Image Evolver")
-
-drawGen(screen)
-last_fit = old_fit = getFitness(screen)
-
-start_time = 0
-time.clock()
-
-for gen in range(0, max_gens + 1):
-    circles_old = [c for c in circles]
-    mutate()
-    drawGen(screen)
-    new_fit = getFitness(screen)
-
-    if new_fit > old_fit:
-        circles = [c for c in circles_old]
-    else:
-        old_fit = new_fit
-
-    if gen % gen_gap == 0:
-        time_passed = time.clock() - start_time
-        fit_dif = last_fit - old_fit
-
-        print("Generation: {}".format(gen))
-        print("Distance: {:,}".format(old_fit))
-        print("% Improvement: {:.2%}".format(fit_dif / last_fit))
-        print("Time / gen: {:.2f}".format((time_passed) / gen_gap))
-        print()
-
-        start_time = time.clock()
-        last_fit = old_fit
-
-        drawGen(screen, True, img, gen)
-    else:
-        drawGen(screen)
+            drawGen(screen, orig_width, orig_height, True, img, gen)
+        else:
+            drawGen(screen, orig_width, orig_height)
