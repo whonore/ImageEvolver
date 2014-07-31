@@ -14,6 +14,7 @@ import svg
 
 
 DATA = False
+MAX_MUTATIONS = 4
 
 
 class Shape():
@@ -78,7 +79,7 @@ def getOriginal(picture):
     return original
 
 
-def randomize(orig_width, orig_height):
+def randomize(orig_width, orig_height, num_shapes):
     """Create a list of random shapes."""
     shapes = []
     for i in range(num_shapes):
@@ -185,7 +186,7 @@ def getFitness(screen, original, orig_width, orig_height):
 
 def mutate(shapes, orig_width, orig_height):
     """Choose 1-4 shapes and randomize one of their features."""
-    num_mutations = random.randint(1, 4)
+    num_mutations = random.randint(1, MAX_MUTATIONS)
 
     for i in range(num_mutations):
         random.choice(shapes).mutate(orig_width, orig_height)
@@ -241,7 +242,7 @@ if __name__ == "__main__":
     orig_height = len(original[0])
 
     if start_gen == 0:
-        shapes = randomize(orig_width, orig_height)
+        shapes = randomize(orig_width, orig_height, num_shapes)
     else:
         shapes = loadSVG(html_path, img, start_gen)
 
@@ -249,7 +250,8 @@ if __name__ == "__main__":
     pygame.display.set_caption("Genetic Image Evolver")
 
     drawGen(screen, orig_width, orig_height)
-    last_fit = old_fit = getFitness(screen, original, orig_width, orig_height)
+    old_fit = getFitness(screen, original, orig_width, orig_height)
+    last_fit = old_fit
 
     start_time = 0
     time.clock()
@@ -281,6 +283,7 @@ if __name__ == "__main__":
             print("Distance: {:,}".format(old_fit))
             print("% Improvement: {:.2%}".format(fit_dif / last_fit))
             print("Time / gen: {:.2f}".format((time_passed) / gen_gap))
+            print("Number of shapes: {}".format(len(shapes)))
             print()
 
             if DATA:
