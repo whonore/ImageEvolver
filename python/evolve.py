@@ -15,6 +15,7 @@ import svg
 
 DATA = False
 MAX_MUTATIONS = 4
+RESOLUTION = 1
 
 
 class Shape():
@@ -173,13 +174,13 @@ def getFitness(screen, original, orig_width, orig_height):
     pixel."""
     dif = 0
 
-    for x in range(orig_width):
-        for y in range(orig_height):
+    for x in range(random.randrange(RESOLUTION), orig_width, RESOLUTION):
+        for y in range(random.randrange(RESOLUTION), orig_height, RESOLUTION):
             orig_px = original[x][y]
             new_px = screen.get_at((x, y))
 
             for i in range(3):
-                dif += (orig_px[i] - new_px[i]) ** 2
+                dif += (RESOLUTION * (orig_px[i] - new_px[i])) ** 2
 
     return dif
 
@@ -194,6 +195,9 @@ def mutate(shapes, orig_width, orig_height):
 
 def parseArgs(args):
     """Parse command line arguments and return the input file and mode."""
+    global DATA
+    global MAX_MUTATIONS
+    global RESOLUTION
     gen_gap = 100
     num_shapes = 256
     start_gen = 0
@@ -216,6 +220,11 @@ def parseArgs(args):
         MAX_MUTATIONS = int(args[idx + 1])
         args.pop(idx)
         args.pop(idx)
+    if '-r' in args:
+        idx = args.index('-r')
+        RESOLUTION = int(args[idx + 1])
+        args.pop(idx)
+        args.pop(idx)
     if '-s' in args:
         idx = args.index('-s')
         num_shapes = int(args[idx + 1])
@@ -232,6 +241,7 @@ def parseArgs(args):
                  + "  -g to set generations to store\n"
                  + "  -l to load a generation\n"
                  + "  -m to set max mutations\n"
+                 + "  -r to set the resolution to check\n"
                  + "  -s to set the number of shapes\n")
 
     return (img, ext, max_gens, gen_gap, num_shapes, start_gen)
@@ -277,7 +287,7 @@ if __name__ == "__main__":
     time.clock()
 
     if DATA:
-        with open('data.csv', 'w') as data:
+        with open(img + '_data.csv', 'w') as data:
             data.write("Generation,Distance,% Improvement")
 
     for gen in range(start_gen, max_gens + 1):
