@@ -11,7 +11,7 @@ svg_circle = ("<circle cx=\"{}px\" cy=\"{}px\" r=\"{}px\" fill=\"#{}\" "
               "fill-opacity=\"{}\"/>\n")
 
 svg_rectange = ("<rect x=\"{}px\" y=\"{}px\" width=\"{}px\" height=\"{}px\" "
-                "fill=\"#{}\" fill-opacity=\"{}\">\n")
+                "fill=\"#{}\" fill-opacity=\"{}\"/>\n")
 
 
 def openSVG(name, width, height):
