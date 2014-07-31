@@ -194,25 +194,45 @@ def mutate(shapes, orig_width, orig_height):
 
 def parseArgs(args):
     """Parse command line arguments and return the input file and mode."""
+    gen_gap = 100
+    num_shapes = 256
     start_gen = 0
 
     args.pop(0)
+    if '-d' in args:
+        DATA = True
+    if '-g' in args:
+        idx = args.index('-g')
+        gen_gap = int(args[idx + 1])
+        args.pop(idx)
+        args.pop(idx)
     if '-l' in args:
         idx = args.index('-l')
         start_gen = int(args[idx + 1])
         args.pop(idx)
         args.pop(idx)
-    if '-d' in args:
-        DATA = True
+    if '-m' in args:
+        idx = args.index('-m')
+        MAX_MUTATIONS = int(args[idx + 1])
+        args.pop(idx)
+        args.pop(idx)
+    if '-s' in args:
+        idx = args.index('-s')
+        num_shapes = int(args[idx + 1])
+        args.pop(idx)
+        args.pop(idx)
 
     try:
         img, ext = args[0].split(".")
         max_gens = int(args[1])
-        gen_gap = int(args[2])
-        num_shapes = int(args[3])
     except IndexError:
-        sys.exit("Input the file to evolve, max_gens, gen_gap, num_shapes.\n"
-                 + "Use -l start_gen to load a file.")
+        sys.exit("Input the file to evolve and max_gens.\n"
+                 + "Options:\n"
+                 + "  -d for data collection\n"
+                 + "  -g to set generations to store\n"
+                 + "  -l to load a generation\n"
+                 + "  -m to set max mutations\n"
+                 + "  -s to set the number of shapes\n")
 
     return (img, ext, max_gens, gen_gap, num_shapes, start_gen)
 
@@ -283,7 +303,6 @@ if __name__ == "__main__":
             print("Distance: {:,}".format(old_fit))
             print("% Improvement: {:.2%}".format(fit_dif / last_fit))
             print("Time / gen: {:.2f}".format((time_passed) / gen_gap))
-            print("Number of shapes: {}".format(len(shapes)))
             print()
 
             if DATA:
