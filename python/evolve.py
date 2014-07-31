@@ -312,7 +312,7 @@ if __name__ == "__main__":
             print("Generation: {}".format(gen))
             print("Distance: {:,}".format(old_fit))
             print("% Improvement: {:.2%}".format(fit_dif / last_fit))
-            print("Time / gen: {:.2f}".format((time_passed) / gen_gap))
+            print("Sec / gen: {:.2f}".format((time_passed) / gen_gap))
             print()
 
             if DATA:
