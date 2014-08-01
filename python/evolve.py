@@ -15,6 +15,7 @@ import svg
 
 DATA = False
 MAX_MUTATIONS = 4
+OLD_MAX_MUTATIONS = 4
 RESOLUTION = 1
 
 
@@ -100,7 +101,7 @@ def loadSVG(html_path, img, generation):
                                     + "cy=\"(-?\d+.?\d*)px\" "
                                     + "r=\"(\d+.?\d*)px\" "
                                     + "fill=\"#([0-9a-fA-F]{6})\" "
-                                    + "fill-opacity=\"(\d+.?\d*)\"")
+                                    + "fill-opacity=\"(\d+.?\d*e?-?\d*)\"")
                 shapes[-1].type = "circle"
                 shapes[-1].x = int(finder.search(line).group(1))
                 shapes[-1].y = int(finder.search(line).group(2))
@@ -119,7 +120,7 @@ def loadSVG(html_path, img, generation):
                                     + "width=\"(\d+.?\d*)px\" "
                                     + "height=\"(\d+.?\d*)px\" "
                                     + "fill=\"#([0-9a-fA-F]{6})\" "
-                                    + "fill-opacity=\"(\d+.?\d*)\"")
+                                    + "fill-opacity=\"(\d+.?\d*e?-?\d*)\"")
                 shapes[-1].type = "square"
                 shapes[-1].x = int(finder.search(line).group(1))
                 shapes[-1].y = int(finder.search(line).group(2))
@@ -192,11 +193,25 @@ def mutate(shapes, orig_width, orig_height):
     for i in range(num_mutations):
         random.choice(shapes).mutate(orig_width, orig_height)
 
+        
+def unstick(reset=False):
+    """Adjust the mutation and resolution to keep the image evolving."""
+    global MAX_MUTATIONS
+    global OLD_MAX_MUTATIONS
+    
+    if reset and MAX_MUTATIONS != OLD_MAX_MUTATIONS:
+        MAX_MUTATIONS = OLD_MAX_MUTATIONS
+        print("Setting max mutations to: {}".format(MAX_MUTATIONS))
+    if not reset and MAX_MUTATIONS < 4 * OLD_MAX_MUTATIONS:
+        MAX_MUTATIONS *= 2
+        print("Setting max mutations to: {}".format(MAX_MUTATIONS))
+            
 
 def parseArgs(args):
     """Parse command line arguments and return the input file and mode."""
     global DATA
     global MAX_MUTATIONS
+    global OLD_MAX_MUTATIONS
     global RESOLUTION
     gen_gap = 100
     num_shapes = 256
@@ -217,7 +232,7 @@ def parseArgs(args):
         args.pop(idx)
     if '-m' in args:
         idx = args.index('-m')
-        MAX_MUTATIONS = int(args[idx + 1])
+        OLD_MAX_MUTATIONS = MAX_MUTATIONS = int(args[idx + 1])
         args.pop(idx)
         args.pop(idx)
     if '-r' in args:
@@ -282,6 +297,7 @@ if __name__ == "__main__":
     drawGen(screen, orig_width, orig_height)
     old_fit = getFitness(screen, original, orig_width, orig_height)
     last_fit = old_fit
+    improvement = [100] * 5
 
     start_time = 0
     time.clock()
@@ -308,6 +324,12 @@ if __name__ == "__main__":
         if gen % gen_gap == 0:
             time_passed = time.clock() - start_time
             fit_dif = last_fit - old_fit
+
+            improvement[(gen // gen_gap) % 5] = fit_dif / last_fit
+            if sum(improvement) / len(improvement) < 0.01 / 100:
+                unstick()
+            else:
+                unstick(True)
 
             print("Generation: {}".format(gen))
             print("Distance: {:,}".format(old_fit))
