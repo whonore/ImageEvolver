@@ -15,6 +15,7 @@ import svg
 
 DATA = False
 MAX_MUTATIONS = 4
+OLD_MAX_MUTATIONS = 4
 RESOLUTION = 1
 
 
@@ -100,7 +101,8 @@ def loadSVG(html_path, img, generation):
                                     + "cy=\"(-?\d+.?\d*)px\" "
                                     + "r=\"(\d+.?\d*)px\" "
                                     + "fill=\"#([0-9a-fA-F]{6})\" "
-                                    + "fill-opacity=\"(\d+.?\d*)\"")
+                                    + "fill-opacity=\"(\d+.?\d*e?-?\d*)\"")
+
                 shapes[-1].type = "circle"
                 shapes[-1].x = int(finder.search(line).group(1))
                 shapes[-1].y = int(finder.search(line).group(2))
@@ -119,7 +121,8 @@ def loadSVG(html_path, img, generation):
                                     + "width=\"(\d+.?\d*)px\" "
                                     + "height=\"(\d+.?\d*)px\" "
                                     + "fill=\"#([0-9a-fA-F]{6})\" "
-                                    + "fill-opacity=\"(\d+.?\d*)\"")
+                                    + "fill-opacity=\"(\d+.?\d*e?-?\d*)\"")
+
                 shapes[-1].type = "square"
                 shapes[-1].x = int(finder.search(line).group(1))
                 shapes[-1].y = int(finder.search(line).group(2))
@@ -135,7 +138,7 @@ def loadSVG(html_path, img, generation):
     return shapes
 
 
-def drawGen(screen, orig_width, orig_height, write=False, name=None,
+def drawGen(screen, shapes, orig_width, orig_height, write=False, name=None,
             generation=None):
     """Draw the shapes to the pygame screen. Create an svg image if
     write == True.
@@ -187,22 +190,45 @@ def getFitness(screen, original, orig_width, orig_height):
 
 def mutate(shapes, orig_width, orig_height):
     """Choose 1-4 shapes and randomize one of their features."""
+    new_shapes = copy.deepcopy(shapes)
     num_mutations = random.randint(1, MAX_MUTATIONS)
 
     for i in range(num_mutations):
-        random.choice(shapes).mutate(orig_width, orig_height)
+        random.choice(new_shapes).mutate(orig_width, orig_height)
+
+    return new_shapes
+
+
+def unstick(reset=False):
+    """Adjust the mutation and resolution to keep the image evolving."""
+    global MAX_MUTATIONS
+    global OLD_MAX_MUTATIONS
+
+    if reset and MAX_MUTATIONS != OLD_MAX_MUTATIONS:
+        MAX_MUTATIONS = OLD_MAX_MUTATIONS
+        print("Setting max mutations to: {}".format(MAX_MUTATIONS))
+    if not reset and MAX_MUTATIONS < 4 * OLD_MAX_MUTATIONS:
+        MAX_MUTATIONS *= 2
+        print("Setting max mutations to: {}".format(MAX_MUTATIONS))
 
 
 def parseArgs(args):
     """Parse command line arguments and return the input file and mode."""
     global DATA
     global MAX_MUTATIONS
+    global OLD_MAX_MUTATIONS
     global RESOLUTION
     gen_gap = 100
     num_shapes = 256
     start_gen = 0
+    num_children = 1
 
     args.pop(0)
+    if '-c' in args:
+        idx = args.index('-c')
+        num_children = int(args[idx + 1])
+        args.pop(idx)
+        args.pop(idx)
     if '-d' in args:
         DATA = True
     if '-g' in args:
@@ -217,7 +243,7 @@ def parseArgs(args):
         args.pop(idx)
     if '-m' in args:
         idx = args.index('-m')
-        MAX_MUTATIONS = int(args[idx + 1])
+        OLD_MAX_MUTATIONS = MAX_MUTATIONS = int(args[idx + 1])
         args.pop(idx)
         args.pop(idx)
     if '-r' in args:
@@ -237,6 +263,7 @@ def parseArgs(args):
     except IndexError:
         sys.exit("Input the file to evolve and max_gens.\n"
                  + "Options:\n"
+                 + "  -c to set number of children per generation\n"
                  + "  -d for data collection\n"
                  + "  -g to set generations to store\n"
                  + "  -l to load a generation\n"
@@ -244,7 +271,7 @@ def parseArgs(args):
                  + "  -r to set the resolution to check\n"
                  + "  -s to set the number of shapes\n")
 
-    return (img, ext, max_gens, gen_gap, num_shapes, start_gen)
+    return (img, ext, max_gens, gen_gap, num_shapes, start_gen, num_children)
 
 
 if __name__ == "__main__":
@@ -259,6 +286,7 @@ if __name__ == "__main__":
     gen_gap = args[3]
     num_shapes = args[4]
     start_gen = args[5]
+    num_children = args[6]
 
     if not os.path.exists(html_path + img):
         os.mkdir(html_path + img)
@@ -279,9 +307,10 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode((orig_width, orig_height))
     pygame.display.set_caption("Genetic Image Evolver")
 
-    drawGen(screen, orig_width, orig_height)
-    old_fit = getFitness(screen, original, orig_width, orig_height)
-    last_fit = old_fit
+    drawGen(screen, shapes, orig_width, orig_height)
+    parent_fit = getFitness(screen, original, orig_width, orig_height)
+    previous_fit = parent_fit
+    improvement = [100] * 5
 
     start_time = 0
     time.clock()
@@ -295,34 +324,48 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 sys.exit()
 
-        shapes_old = copy.deepcopy(shapes)
-        mutate(shapes, orig_width, orig_height)
-        drawGen(screen, orig_width, orig_height)
-        new_fit = getFitness(screen, original, orig_width, orig_height)
+        best_child_fit = None
+        best_child_shapes = None
+        for i in range(num_children):
+            child_shapes = mutate(shapes, orig_width, orig_height)
+            drawGen(screen, child_shapes, orig_width, orig_height)
+            child_fit = getFitness(screen, original, orig_width, orig_height)
 
-        if new_fit > old_fit:
-            shapes = copy.deepcopy(shapes_old)
-        else:
-            old_fit = new_fit
+            if best_child_fit is None:
+                best_child_fit = child_fit
+                best_child_shapes = copy.deepcopy(child_shapes)
+            elif child_fit < best_child_fit:
+                best_child_fit = child_fit
+                best_child_shapes = copy.deepcopy(child_shapes)
+
+        if best_child_fit < parent_fit:
+            shapes = copy.deepcopy(best_child_shapes)
+            parent_fit = best_child_fit
 
         if gen % gen_gap == 0:
             time_passed = time.clock() - start_time
-            fit_dif = last_fit - old_fit
+            fit_dif = previous_fit - parent_fit
+
+            improvement[(gen // gen_gap) % 5] = fit_dif / previous_fit
+            if sum(improvement) / len(improvement) < 0.01 / 100:
+                unstick()
+            else:
+                unstick(True)
 
             print("Generation: {}".format(gen))
-            print("Distance: {:,}".format(old_fit))
-            print("% Improvement: {:.2%}".format(fit_dif / last_fit))
+            print("Distance: {:,}".format(parent_fit))
+            print("% Improvement: {:.2%}".format(fit_dif / previous_fit))
             print("Sec / gen: {:.2f}".format((time_passed) / gen_gap))
             print()
 
             if DATA:
-                with open('data.csv', 'a') as data:
-                    data.write("\n" + str(gen) + "," + str(old_fit)
-                               + "," + str(fit_dif / last_fit))
+                with open(img + '_data.csv', 'a') as data:
+                    data.write("\n" + str(gen) + "," + str(parent_fit)
+                               + "," + str(fit_dif / previous_fit))
 
             start_time = time.clock()
-            last_fit = old_fit
+            previous_fit = parent_fit
 
-            drawGen(screen, orig_width, orig_height, True, img, gen)
+            drawGen(screen, shapes, orig_width, orig_height, True, img, gen)
         else:
-            drawGen(screen, orig_width, orig_height)
+            drawGen(screen, shapes, orig_width, orig_height)
