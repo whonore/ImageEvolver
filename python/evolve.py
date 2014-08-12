@@ -357,7 +357,7 @@ if __name__ == "__main__":
             print()
 
             if DATA:
-                with open('data.csv', 'a') as data:
+                with open(img + '_data.csv', 'a') as data:
                     data.write("\n" + str(gen) + "," + str(parent_fit)
                                + "," + str(fit_dif / previous_fit))
 
