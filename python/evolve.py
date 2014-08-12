@@ -102,6 +102,7 @@ def loadSVG(html_path, img, generation):
                                     + "r=\"(\d+.?\d*)px\" "
                                     + "fill=\"#([0-9a-fA-F]{6})\" "
                                     + "fill-opacity=\"(\d+.?\d*e?-?\d*)\"")
+
                 shapes[-1].type = "circle"
                 shapes[-1].x = int(finder.search(line).group(1))
                 shapes[-1].y = int(finder.search(line).group(2))
@@ -121,6 +122,7 @@ def loadSVG(html_path, img, generation):
                                     + "height=\"(\d+.?\d*)px\" "
                                     + "fill=\"#([0-9a-fA-F]{6})\" "
                                     + "fill-opacity=\"(\d+.?\d*e?-?\d*)\"")
+
                 shapes[-1].type = "square"
                 shapes[-1].x = int(finder.search(line).group(1))
                 shapes[-1].y = int(finder.search(line).group(2))
