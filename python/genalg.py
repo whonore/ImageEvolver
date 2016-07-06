@@ -33,9 +33,9 @@ class GenAlg(object):
                 print("Generation {}".format(gen))
                 print("\tFitness min/max/mean {:.4f} {:.4f} {:.4f}"
                       .format(fits.min(), fits.max(), fits.mean()))
-                best = self.pool.min()
+                best = min(self.pool)
 
-                best.log()
+                best.log(gen)
 
             best, worst = GenAlg.get_children(self.pool, select_size)
             children = []
@@ -52,7 +52,7 @@ class GenAlg(object):
             for w, c in zip(worst, children):
                 w.replace(c)
 
-            fittest = self.pool.min()
+            fittest = min(self.pool)
             if fittest.fitness() == 0 and fittest.valid:
                 return fittest
 

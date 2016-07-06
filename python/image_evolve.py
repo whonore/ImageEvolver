@@ -28,7 +28,8 @@ class ImageChromo(ga.Chromosone):
             self.image = Image.new('RGB', self.target.size)
             self.draw = ImageDraw.Draw(self.image)
 
-            self.dir = os.path.join('output', target)
+            self.dir = os.path.join('..', 'output',
+                                    os.path.splitext(os.path.basename(target))[0])
             shutil.rmtree(self.dir, ignore_errors=True)
             os.makedirs(self.dir)
 
